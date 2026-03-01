@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stats YouTube Music</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.js"></script>
+    <style>
+        :root {
+            --bg-body: #090e17;
+            --bg-card: #111827;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #39C5BB;
+            --accent: #ff2a9d;
+            --border-light: rgba(255, 255, 255, 0.08);
+            --hover-bg: rgba(57, 197, 187, 0.08);
+            --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            padding: 20px;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            overflow-x: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-body);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 30px;
+            max-width: 100%;
+            width: 98%;
+            margin: 0 auto;
+            display: none;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            padding-right: 15px;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            padding: 0 5px;
+        }
+
+        .header-title h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            line-height: 1;
+        }
+
+        .header-title h1 span {
+            color: var(--primary);
+        }
+
+        .header-subtitle {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            display: block;
+            margin-top: 8px;
+        }
+
+        .lang-switch {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-light);
+            cursor: pointer;
+            margin-top: 3px;
+        }
+
+        .lang-switch span {
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: var(--text-muted);
+            transition: 0.3s;
+        }
+
+        .lang-switch span.active {
+            background: var(--primary);
+            color: #000;
+        }
+
+        .metrics-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s, border-color 0.2s;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .stat-card:hover {
+            transform: translateX(5px);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+
+        .stat-sub {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .stat-sub span {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .c-yellow {
+            color: #facc15;
+        }
+
+        .c-pink {
+            color: #f472b6;
+        }
+
+        .c-purple {
+            color: #c084fc;
+        }
+
+        .c-blue {
+            color: var(--primary);
+        }
+
+        .streak-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .streak-thumb {
+            width: 45px;
+            height: 45px;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+
+        .streak-text {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .streak-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-main);
+        }
+
+        .streak-artist {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .gems-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .gem-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+
+        .gem-row:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .gem-thumb {
+            width: 35px;
+            height: 35px;
+            border-radius: 4px;
+            object-fit: cover;
+            filter: grayscale(50%);
+            transition: 0.2s;
+        }
+
+        .gem-row:hover .gem-thumb {
+            filter: grayscale(0%);
+        }
+
+        .gem-info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .gem-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .gem-artist {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            min-width: 0;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .chart-row-full {
+            width: 100%;
+        }
+
+        .chart-row-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            min-width: 0;
+            min-height: 0;
+            flex: 1;
+        }
+
+        .chart-container-large {
+            height: 350px !important;
+            flex: none;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            color: var(--primary);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .monthly-tops-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .month-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 15px;
+            transition: 0.2s;
+        }
+
+        .month-card:hover {
+            border-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            background: var(--hover-bg);
+        }
+
+        .month-card-header {
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .month-top-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .month-top-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .mt-thumb {
+            width: 35px;
+            height: 35px;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+
+        .mt-thumb.round {
+            border-radius: 50%;
+        }
+
+        .mt-info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .mt-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .mt-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-main);
+        }
+
+        .mt-count {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .obsessions-wrapper {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            padding-bottom: 15px;
+        }
+
+        .obsessions-wrapper::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .obsessions-wrapper::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        .obsession-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 15px;
+            min-width: 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: 0.2s;
+        }
+
+        .obsession-card:hover {
+            background: var(--hover-bg);
+            transform: translateY(-3px);
+        }
+
+        .obs-date {
+            font-size: 0.8rem;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .obs-thumb {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .obs-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .obs-count {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .heatmap-wrapper {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .heatmap-labels {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 120px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            padding-bottom: 3px;
+            flex-shrink: 0;
+        }
+
+        .heatmap {
+            display: grid;
+            grid-template-rows: repeat(7, 1fr);
+            grid-auto-flow: column;
+            gap: 3px;
+            height: 120px;
+            flex-grow: 1;
+        }
+
+        .heatmap-cell {
+            width: 100%;
+            min-width: 10px;
+            height: 100%;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.03);
+            transition: 0.2s;
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.3);
+            border: 1px solid white;
+            z-index: 5;
+        }
+
+        .heatmap-cell.lvl-1 {
+            background: rgba(57, 197, 187, 0.2);
+        }
+
+        .heatmap-cell.lvl-2 {
+            background: rgba(57, 197, 187, 0.4);
+        }
+
+        .heatmap-cell.lvl-3 {
+            background: rgba(57, 197, 187, 0.7);
+        }
+
+        .heatmap-cell.lvl-4 {
+            background: rgba(57, 197, 187, 1);
+            box-shadow: 0 0 10px rgba(57, 197, 187, 0.4);
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 25px;
+        }
+
+        .lists-column {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .lists-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .tree-column {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .clean-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .list-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            border-radius: 8px;
+            transition: 0.2s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .list-row:hover {
+            background: var(--hover-bg);
+            transform: translateX(3px);
+            border-color: transparent;
+        }
+
+        .row-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            overflow: hidden;
+        }
+
+        .rank {
+            width: 20px;
+            font-weight: 700;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .thumb {
+            object-fit: cover;
+            background: #1e293b;
+            flex-shrink: 0;
+        }
+
+        .t-round {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+        }
+
+        .t-square {
+            width: 38px;
+            height: 38px;
+            border-radius: 6px;
+        }
+
+        .row-text {
+            display: flex;
+            flex-direction: column;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .count-badge {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--text-main);
+        }
+
+        .top-3 .rank {
+            color: var(--primary);
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-light);
+            color: white;
+            transition: 0.3s;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .tree {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            padding-right: 15px;
+        }
+
+        .tree::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .tier-node {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+        }
+
+        .tier-node>summary {
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .tier-node[open]>summary {
+            color: var(--primary);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .tier-content {
+            padding: 5px;
+        }
+
+        .artist-node>summary {
+            padding: 8px 10px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .artist-node>summary:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .artist-node[open]>summary {
+            background: var(--hover-bg);
+        }
+
+        .artist-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--accent);
+            background: rgba(255, 42, 157, 0.1);
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .artist-tracks {
+            padding-left: 15px;
+            margin-top: 5px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            margin-left: 20px;
+        }
+
+        .track-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .track-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .drop-zone {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(9, 14, 23, 0.95);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+            transition: 0.3s;
+        }
+
+        .drop-zone.hidden {
+            display: none;
+        }
+
+        .drop-zone.dragover {
+            border: 4px dashed var(--primary);
+            background: rgba(57, 197, 187, 0.1);
+        }
+
+        .drop-content {
+            text-align: center;
+        }
+
+        .drop-content h2 {
+            margin-bottom: 10px;
+            color: var(--text-main);
+            font-size: 1.8rem;
+        }
+
+        .drop-content p {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .spinner {
+            width: 45px;
+            height: 45px;
+            border: 4px solid var(--border-light);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 1400px) {
+            .data-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .lists-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .tree-column-wrapper {
+                height: 600px;
+                flex: none !important;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: relative;
+                top: 0;
+                max-height: none;
+                overflow: visible;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .header-top {
+                grid-column: 1 / -1;
+            }
+
+            .metrics-stack {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                grid-auto-rows: max-content;
+                grid-column: 1 / -1;
+                align-items: start;
+            }
+
+            .chart-row-split {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .metrics-stack {
+                grid-template-columns: 1fr;
+            }
+
+            .lists-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="drop-zone" class="drop-zone hidden">
+        <div class="drop-content">
+            <h2 id="dz-title">📥 Glissez-déposez votre historique ici</h2>
+            <p id="dz-subtitle">Formats supportés : .json ou .html</p>
+            <div id="upload-loader" style="display: none; margin-top: 30px;">
+                <div class="spinner"></div>
+                <p id="dz-loading-text" style="color: var(--primary); margin-top: 15px; font-weight: 600;">Analyse en
+                    cours... (cela peut prendre quelques secondes)</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-container" id="dashboard-container">
+
+        <aside class="sidebar">
+            <div class="header-top">
+                <div class="header-title">
+                    <h1 id="main-title">YouTube Music <span>Stats</span></h1>
+                    <span class="header-subtitle" id="main-subtitle">Dashboard</span>
+                </div>
+                <div class="lang-switch" onclick="toggleLang()">
+                    <span id="lang-fr" class="active">FR</span>
+                    <span id="lang-en">EN</span>
+                </div>
+            </div>
+
+            <div class="metrics-stack">
+                <div class="stat-card">
+                    <div>
+                        <div class="stat-label" id="lbl-explorer">🗺️ Explorateur</div>
+                        <div class="stat-value c-yellow"><span id="total-artists">...</span></div>
+                        <div class="stat-sub" id="lbl-artists-disc">Artistes découverts</div>
+                    </div>
+                    <div class="stat-sub"
+                        style="margin-top: 15px; padding-top: 10px; border-top: 1px solid var(--border-light);"
+                        id="lbl-unique-tracks-container">
+                        Dont <span id="total-tracks">...</span> titres uniques
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div>
+                        <div class="stat-label" id="lbl-streak">🔥 Série Record</div>
+                        <div class="stat-value c-pink" id="streak-count">...</div>
+                        <div class="stat-sub" id="lbl-streak-days">Jours consécutifs</div>
+                    </div>
+                    <div id="streak-content" class="streak-content" style="display: none;">
+                        <img id="streak-thumb" src="" class="streak-thumb">
+                        <div class="streak-text">
+                            <span class="streak-name" id="streak-name"></span>
+                            <span class="streak-artist" id="streak-artist"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-card-compact">
+                    <div>
+                        <div class="stat-label" id="lbl-bestday">📅 Plus grosse journée</div>
+                        <div class="stat-value c-purple" id="record-day">...</div>
+                        <div class="stat-sub" id="lbl-listens24h">Écoutes en 24h</div>
+                    </div>
+                    <div class="stat-sub"
+                        style="margin-top: 15px; padding-top: 10px; border-top: 1px solid var(--border-light);"
+                        id="lbl-bestday-date-container">
+                        Le ...
+                    </div>
+                </div>
+
+                <div class="stat-card stat-card-compact">
+                    <div>
+                        <div class="stat-label" id="lbl-morning">🌅 L'Hymne du Matin (6h-10h)</div>
+                        <div id="morning-content" class="streak-content"
+                            style="display: none; border-top: none; padding-top: 0; margin-top: 10px;">
+                            <img id="morning-thumb" src="" class="streak-thumb">
+                            <div class="streak-text">
+                                <span class="streak-name" id="morning-name">...</span>
+                                <span class="streak-artist" id="morning-artist">...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-sub"
+                        style="margin-top: 15px; padding-top: 10px; border-top: 1px solid var(--border-light);">
+                        <span id="morning-count" style="color:var(--text-main); font-weight:600;">0</span> <span
+                            class="lbl-listens">écoutes</span>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-card-compact">
+                    <div>
+                        <div class="stat-label" id="lbl-evening">🦉 L'Hymne du Soir (22h-2h)</div>
+                        <div id="evening-content" class="streak-content"
+                            style="display: none; border-top: none; padding-top: 0; margin-top: 10px;">
+                            <img id="evening-thumb" src="" class="streak-thumb">
+                            <div class="streak-text">
+                                <span class="streak-name" id="evening-name">...</span>
+                                <span class="streak-artist" id="evening-artist">...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-sub"
+                        style="margin-top: 15px; padding-top: 10px; border-top: 1px solid var(--border-light);">
+                        <span id="evening-count" style="color:var(--text-main); font-weight:600;">0</span> <span
+                            class="lbl-listens">écoutes</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div>
+                        <div class="stat-label" id="lbl-gems">💎 Pépites Oubliées</div>
+                        <div class="stat-sub" style="margin-bottom: 5px;" id="lbl-gems-desc">Tu les as saignés... il y a
+                            plus de 3 mois</div>
+                        <div class="gems-list" id="gems-list"></div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div>
+                        <div class="stat-label" id="lbl-total">🎧 Total des écoutes</div>
+                        <div class="stat-value c-blue" id="total-listens">...</div>
+                        <div class="stat-sub" id="lbl-since">Depuis toujours</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+
+            <div class="card chart-row-full">
+                <h2 class="card-title" id="title-evo">📈 Évolution des écoutes</h2>
+                <div class="chart-container chart-container-large">
+                    <canvas id="evolutionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-row-split">
+                <div class="card">
+                    <h2 class="card-title" id="title-habits">🕒 Habitudes horaires</h2>
+                    <div class="chart-container">
+                        <canvas id="habitsChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2 class="card-title" id="title-radar">🕸️ Radar de la semaine</h2>
+                    <div class="chart-container">
+                        <canvas id="weeklyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card chart-row-full">
+                <h2 class="card-title" id="title-h2h">Évolution des Artistes écoutés</h2>
+                <div class="chart-container chart-container-large">
+                    <canvas id="headToHeadChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card chart-row-full">
+                <h2 class="card-title" id="title-monthly-tops">🗓️ Palmarès mensuel (12 derniers mois)</h2>
+                <div class="monthly-tops-grid" id="monthly-tops-list"></div>
+            </div>
+
+            <div class="card chart-row-full">
+                <h2 class="card-title" id="title-discovery">🌱 Taux de Découverte</h2>
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;" id="desc-discovery">...
+                </div>
+                <div class="chart-container chart-container-large">
+                    <canvas id="discoveryChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title" id="title-obs">🌟 Timeline des Obsessions (Artiste du mois)</h2>
+                <div class="obsessions-wrapper" id="obsessions-list"></div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title" id="title-heat">🔥 Calendrier d'activité (365 derniers jours)</h2>
+                <div class="heatmap-wrapper">
+                    <div class="heatmap-labels"></div>
+                    <div class="heatmap" id="heatmap-grid"></div>
+                </div>
+            </div>
+
+            <div class="data-grid">
+                <div class="lists-column">
+                    <div class="lists-grid">
+                        <div class="card">
+                            <h2 class="card-title" id="title-topart">🏆 Top 15 Artistes</h2>
+                            <div class="clean-list" id="artists-list"></div>
+                        </div>
+                        <div class="card">
+                            <h2 class="card-title" id="title-toptrack">🎵 Top 15 Morceaux</h2>
+                            <div class="clean-list" id="tracks-list"></div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2 class="card-title" id="title-onehit">🎯 One-Hit Wonders</h2>
+                        <div class="clean-list" id="onehit-list"></div>
+                    </div>
+                </div>
+
+                <div class="tree-column-wrapper"
+                    style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0;">
+                    <div class="tree-column"
+                        style="display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0;">
+                        <div class="card"
+                            style="display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; padding-bottom: 5px;">
+                            <input type="text" id="search-input" class="search-bar" style="flex-shrink: 0;"
+                                placeholder="🔍 Rechercher un artiste ou un morceau...">
+                            <div class="tree" id="artist-tree"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const i18n = {
+            fr: {
+                title: "Mes Stats YouTube Music - Dashboard",
+                dashboard: "Dashboard",
+                explorer: "🗺️ Explorateur",
+                artistsDiscovered: "Artistes découverts",
+                uniqueTracks: "Dont <span id='total-tracks' style='color:var(--text-main); font-weight:600;'>{0}</span> titres uniques",
+                streak: "🔥 Série Record",
+                streakDays: "Jours consécutifs",
+                bestDay: "📅 Plus grosse journée",
+                listens24h: "Écoutes en 24h",
+                theDate: "Le <span id='record-day-date' style='color:var(--text-main); font-weight:600;'>{0}</span>",
+                forgottenGems: "💎 Pépites Oubliées",
+                forgottenDesc: "Tu les as saignés... il y a plus de 3 mois",
+                totalListens: "🎧 Total des écoutes",
+                sinceAlways: "Depuis toujours",
+                noGems: "Aucune pépite trouvée... pour l'instant !",
+                evolution: "📈 Évolution des écoutes",
+                habits: "🕒 Habitudes horaires",
+                radar: "🕸️ Radar de la semaine",
+                headToHead: "Évolution des Artistes écoutés (Clique sur la légende pour filtrer !)",
+                monthlyTops: "🗓️ Palmarès mensuel (12 derniers mois)",
+                lblTopArt: "Artiste n°1",
+                lblTopTrk: "Titre n°1",
+                obsessions: "🌟 Timeline des Obsessions (Artiste du mois)",
+                heatmap: "🔥 Calendrier d'activité (365 derniers jours)",
+                topArtists: "🏆 Top 15 Artistes",
+                topTracks: "🎵 Top 15 Morceaux",
+                searchPlaceholder: "🔍 Rechercher un artiste ou un morceau...",
+                listens: "écoutes",
+                listenLe: "{0} écoutes le {1}",
+                noListenLe: "Aucune écoute le {0}",
+                artists: "artistes",
+                discoveryRateTitle: "🌱 Taux de Découverte",
+                discoveryRateDesc: "En {0}, {1}% de tes écoutes étaient des artistes que tu n'avais jamais écoutés avant.",
+                morningHymn: "🌅 L'Hymne du Matin (6h-10h)",
+                eveningHymn: "🦉 L'Hymne du Soir (22h-2h)",
+                oneHitWonder: "🎯 One-Hit Wonders",
+                days: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
+                months: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
+                tier1: "💎 Top 25% du volume",
+                tier2: "🥇 25-50% du volume",
+                tier3: "🥈 50-75% du volume",
+                tier4: "🥉 Les 25% restants",
+                tracksText: "titres",
+                onWord: "sur",
+                dropTitle: "📥 Glissez-déposez votre historique ici",
+                dropSubtitle: "Formats supportés : .json (rapide) ou .html (parsing automatique plus long)",
+                dropLoading: "Analyse en cours... (cela peut prendre quelques secondes pour un fichier HTML)"
+            },
+            en: {
+                title: "My YouTube Music Stats - Dashboard",
+                dashboard: "Dashboard",
+                explorer: "🗺️ Explorer",
+                artistsDiscovered: "Discovered artists",
+                uniqueTracks: "Including <span id='total-tracks' style='color:var(--text-main); font-weight:600;'>{0}</span> unique tracks",
+                streak: "🔥 Record Streak",
+                streakDays: "Consecutive days",
+                bestDay: "📅 Biggest Day",
+                listens24h: "Listens in 24h",
+                theDate: "On <span id='record-day-date' style='color:var(--text-main); font-weight:600;'>{0}</span>",
+                forgottenGems: "💎 Forgotten Gems",
+                forgottenDesc: "You played them on repeat... over 3 months ago",
+                totalListens: "🎧 Total Listens",
+                sinceAlways: "All time",
+                noGems: "No gems found... yet!",
+                evolution: "📈 Listening Evolution",
+                habits: "🕒 Hourly Habits",
+                radar: "🕸️ Weekly Radar",
+                headToHead: "⚔️ Artists Head-to-Head (Click legend to toggle!)",
+                monthlyTops: "🗓️ Monthly Hall of Fame (Last 12 months)",
+                lblTopArt: "Top Artist",
+                lblTopTrk: "Top Track",
+                obsessions: "🌟 Obsessions Timeline (Artist of the month)",
+                heatmap: "🔥 Activity Calendar (Last 365 days)",
+                topArtists: "🏆 Top 15 Artists",
+                topTracks: "🎵 Top 15 Tracks",
+                searchPlaceholder: "🔍 Search for an artist or a track...",
+                listens: "listens",
+                listenLe: "{0} listens on {1}",
+                noListenLe: "No listens on {0}",
+                artists: "artists",
+                discoveryRateTitle: "🌱 Discovery Rate",
+                discoveryRateDesc: "In {0}, {1}% of your listens were artists you had never heard before.",
+                morningHymn: "🌅 Morning Anthem (6am-10am)",
+                eveningHymn: "🦉 Night Anthem (10pm-2am)",
+                oneHitWonder: "🎯 One-Hit Wonders",
+                days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+                months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+                tier1: "💎 Top 25% volume",
+                tier2: "🥇 25-50% volume",
+                tier3: "🥈 50-75% volume",
+                tier4: "🥉 Remaining 25%",
+                tracksText: "tracks",
+                onWord: "on",
+                dropTitle: "📥 Drag & drop your history file here",
+                dropSubtitle: "Supported formats: .json (fast) or .html (slower, automatic parsing)",
+                dropLoading: "Parsing in progress... (this may take a few seconds for an HTML file)"
+            }
+        };
+
+        let currentLang = 'fr'; let statsData = null; let charts = {};
+
+        Chart.defaults.color = '#94a3b8'; Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+
+        function t(key, ...args) { let text = i18n[currentLang][key] || key; args.forEach((arg, i) => { text = text.replace(`{${i}}`, arg); }); return text; }
+        function formatMonth(yyyyMm) {
+            const parts = yyyyMm.split('-');
+            if (parts.length >= 2) return `${i18n[currentLang].months[parseInt(parts[1], 10) - 1]} ${parts[0]}`;
+            return yyyyMm;
+        }
+        function formatDate(dateStr) {
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                if (currentLang === 'en') return `${i18n.en.months[parseInt(parts[1], 10) - 1]} ${parseInt(parts[2], 10)}, ${parts[0]}`;
+                return `${parseInt(parts[2], 10)} ${i18n.fr.months[parseInt(parts[1], 10) - 1].toLowerCase()} ${parts[0]}`;
+            }
+            return dateStr;
+        }
+        function truncateStr(str, max = 25) { if (!str) return ''; return str.length > max ? str.substring(0, max) + '...' : str; }
+        function escapeQuotes(str) { if (!str) return ''; return str.replace(/"/g, '&quot;'); }
+
+        function toggleLang() {
+            currentLang = currentLang === 'fr' ? 'en' : 'fr';
+            document.getElementById('lang-fr').classList.toggle('active', currentLang === 'fr');
+            document.getElementById('lang-en').classList.toggle('active', currentLang === 'en');
+            document.documentElement.lang = currentLang;
+            updateStaticTexts(); if (statsData) renderAll();
+        }
+
+        function updateStaticTexts() {
+            document.title = t('title');
+            document.getElementById('main-subtitle').innerText = t('dashboard');
+            document.getElementById('lbl-explorer').innerText = t('explorer');
+            document.getElementById('lbl-artists-disc').innerText = t('artistsDiscovered');
+            document.getElementById('lbl-streak').innerText = t('streak');
+            document.getElementById('lbl-streak-days').innerText = t('streakDays');
+            document.getElementById('lbl-bestday').innerText = t('bestDay');
+            document.getElementById('lbl-listens24h').innerText = t('listens24h');
+            document.getElementById('lbl-morning').innerText = t('morningHymn');
+            document.getElementById('lbl-evening').innerText = t('eveningHymn');
+            document.getElementById('lbl-gems').innerText = t('forgottenGems');
+            document.getElementById('lbl-gems-desc').innerText = t('forgottenDesc');
+            document.getElementById('lbl-total').innerText = t('totalListens');
+            document.getElementById('lbl-since').innerText = t('sinceAlways');
+            document.getElementById('title-evo').innerText = t('evolution');
+            document.getElementById('title-habits').innerText = t('habits');
+            document.getElementById('title-radar').innerText = t('radar');
+            document.getElementById('title-h2h').innerText = t('headToHead');
+            document.getElementById('title-monthly-tops').innerText = t('monthlyTops');
+            document.getElementById('title-discovery').innerText = t('discoveryRateTitle');
+            document.getElementById('title-obs').innerText = t('obsessions');
+            document.getElementById('title-heat').innerText = t('heatmap');
+            document.getElementById('title-topart').innerText = t('topArtists');
+            document.getElementById('title-toptrack').innerText = t('topTracks');
+            document.getElementById('title-onehit').innerText = t('oneHitWonder');
+            document.getElementById('search-input').placeholder = t('searchPlaceholder');
+            document.querySelectorAll('.lbl-listens').forEach(el => el.innerText = t('listens'));
+            document.getElementById('dz-title').innerText = t('dropTitle');
+            document.getElementById('dz-subtitle').innerText = t('dropSubtitle');
+            document.getElementById('dz-loading-text').innerText = t('dropLoading');
+        }
+
+        async function loadStats() {
+            try {
+                updateStaticTexts();
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                if (!response.ok || data.needUpload) { showDropZone(); return; }
+                statsData = data;
+                if (statsData.error) throw new Error(statsData.error);
+                hideDropZone(); renderAll(); setupSearch();
+            } catch (error) { console.error(error); showDropZone(); }
+        }
+
+        const dropZone = document.getElementById('drop-zone');
+        const uploadLoader = document.getElementById('upload-loader');
+        document.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.remove('hidden'); dropZone.classList.add('dragover'); });
+        document.addEventListener('dragleave', (e) => { e.preventDefault(); if (!e.relatedTarget) { dropZone.classList.remove('dragover'); if (statsData) dropZone.classList.add('hidden'); } });
+        document.addEventListener('drop', async (e) => {
+            e.preventDefault(); dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0]; if (!file) { if (statsData) dropZone.classList.add('hidden'); return; }
+            uploadLoader.style.display = 'block';
+            document.getElementById('dz-title').innerText = "Préparation du Dashboard...";
+            document.getElementById('dz-subtitle').innerText = "Veuillez patienter pendant le Chargement...";
+
+            const formData = new FormData(); formData.append('file', file);
+            try {
+                const response = await fetch('/api/upload', { method: 'POST', body: formData });
+                if (!response.ok) throw new Error((await response.json()).error || 'Erreur inconnue');
+                statsData = await response.json();
+
+                document.getElementById('dashboard-container').style.display = 'grid';
+                renderAll(); setupSearch();
+
+                setTimeout(() => {
+                    dropZone.classList.add('hidden');
+                    uploadLoader.style.display = 'none';
+                    document.getElementById('dz-title').innerText = t('dropTitle');
+                    document.getElementById('dz-subtitle').innerText = t('dropSubtitle');
+                }, 8000);
+            } catch (error) {
+                alert("Erreur: " + error.message);
+                uploadLoader.style.display = 'none';
+                document.getElementById('dz-title').innerText = t('dropTitle');
+                document.getElementById('dz-subtitle').innerText = t('dropSubtitle');
+            }
+        });
+
+        function showDropZone() { dropZone.classList.remove('hidden'); document.getElementById('dashboard-container').style.display = 'none'; }
+        function hideDropZone() { dropZone.classList.add('hidden'); document.getElementById('dashboard-container').style.display = 'grid'; }
+
+        function renderAll() {
+            const data = statsData; const isFr = currentLang === 'fr';
+
+            document.getElementById('total-listens').innerText = data.totalListens.toLocaleString(isFr ? 'fr-FR' : 'en-US');
+            document.getElementById('total-artists').innerText = data.uniqueArtists.toLocaleString(isFr ? 'fr-FR' : 'en-US');
+            document.getElementById('lbl-unique-tracks-container').innerHTML = t('uniqueTracks', data.uniqueTracks.toLocaleString(isFr ? 'fr-FR' : 'en-US'));
+
+            if (data.bestTrackStreak && data.bestTrackStreak.count > 0) {
+                document.getElementById('streak-count').innerText = data.bestTrackStreak.count;
+                document.getElementById('streak-name').innerText = truncateStr(data.bestTrackStreak.name, 25);
+                document.getElementById('streak-artist').innerText = truncateStr(data.bestTrackStreak.artist, 25);
+                document.getElementById('streak-thumb').src = data.bestTrackStreak.thumb || 'https://placehold.co/45x45/1e293b/ffffff?text=?';
+                document.getElementById('streak-content').style.display = 'flex';
+            } else document.getElementById('streak-content').style.display = 'none';
+
+            if (data.recordDay && data.recordDay.date) {
+                document.getElementById('record-day').innerText = `${data.recordDay.count}`;
+                document.getElementById('lbl-bestday-date-container').innerHTML = t('theDate', formatDate(data.recordDay.date));
+            }
+
+            if (data.morningHymn) {
+                document.getElementById('morning-name').innerText = truncateStr(data.morningHymn.name, 25);
+                document.getElementById('morning-artist').innerText = truncateStr(data.morningHymn.artist, 25);
+                document.getElementById('morning-count').innerText = data.morningHymn.count;
+                document.getElementById('morning-thumb').src = data.morningHymn.thumb || 'https://placehold.co/45x45/1e293b/ffffff?text=?';
+                document.getElementById('morning-content').style.display = 'flex';
+            }
+
+            if (data.eveningHymn) {
+                document.getElementById('evening-name').innerText = truncateStr(data.eveningHymn.name, 25);
+                document.getElementById('evening-artist').innerText = truncateStr(data.eveningHymn.artist, 25);
+                document.getElementById('evening-count').innerText = data.eveningHymn.count;
+                document.getElementById('evening-thumb').src = data.eveningHymn.thumb || 'https://placehold.co/45x45/1e293b/ffffff?text=?';
+                document.getElementById('evening-content').style.display = 'flex';
+            }
+
+            if (data.forgottenGems && data.forgottenGems.length > 0) {
+                document.getElementById('gems-list').innerHTML = data.forgottenGems.map(gem => {
+                    const d = new Date(gem.lastPlayed);
+                    const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    return `
+                    <div class="gem-row" title="${t('listenLe', gem.count, formatDate(dStr))}">
+                        <img src="${gem.thumb || 'https://placehold.co/35x35/1e293b/ffffff?text=?'}" class="gem-thumb">
+                        <div class="gem-info">
+                            <span class="gem-name" title="${escapeQuotes(gem.name)}">${truncateStr(gem.name, 25)}</span>
+                            <span class="gem-artist" title="${escapeQuotes(gem.artist)}">${truncateStr(gem.artist, 20)} (${gem.count} ${t('listens')})</span>
+                        </div>
+                    </div>`
+                }).join('');
+            } else document.getElementById('gems-list').innerHTML = `<div style="color:var(--text-muted); font-size:0.8rem; font-style:italic;">${t('noGems')}</div>`;
+
+            document.getElementById('monthly-tops-list').innerHTML = data.monthlyTops.map(mTop => `
+                <div class="month-card">
+                    <div class="month-card-header">${formatMonth(mTop.month)}</div>
+                    <div class="month-top-row" title="${escapeQuotes(mTop.topArtist.name)} - ${mTop.topArtist.count} ${t('listens')}">
+                        <img src="${mTop.topArtist.thumb || 'https://placehold.co/35x35/1e293b/ffffff?text=?'}" class="mt-thumb round">
+                        <div class="mt-info">
+                            <span class="mt-label">${t('lblTopArt')}</span>
+                            <span class="mt-name">${truncateStr(mTop.topArtist.name, 20)}</span>
+                            <span class="mt-count">${mTop.topArtist.count} ${t('listens')}</span>
+                        </div>
+                    </div>
+                    <div class="month-top-row" style="margin-top: 15px;" title="${escapeQuotes(mTop.topTrack.name)} - ${mTop.topTrack.count} ${t('listens')}">
+                        <img src="${mTop.topTrack.thumb || 'https://placehold.co/35x35/1e293b/ffffff?text=?'}" class="mt-thumb">
+                        <div class="mt-info">
+                            <span class="mt-label">${t('lblTopTrk')}</span>
+                            <span class="mt-name">${truncateStr(mTop.topTrack.name, 20)}</span>
+                            <span class="mt-count">${mTop.topTrack.count} ${t('listens')}</span>
+                        </div>
+                    </div>
+                </div>
+            `).reverse().join('');
+
+            document.getElementById('obsessions-list').innerHTML = data.obsessionsTimeline.map(obs => `
+                <div class="obsession-card">
+                    <div class="obs-date">${formatMonth(obs.month)}</div>
+                    <img src="${obs.thumb || 'https://placehold.co/70x70/1e293b/ffffff?text=?'}" class="obs-thumb" loading="lazy">
+                    <div class="obs-name" title="${escapeQuotes(obs.artist)}">${truncateStr(obs.artist, 20)}</div>
+                    <div class="obs-count">${obs.count} ${t('listens')}</div>
+                </div>
+            `).join('');
+
+            renderCharts(data); renderHeatmap(data);
+
+            document.getElementById('artists-list').innerHTML = data.topArtists.map((item, index) => `
+                <div class="list-row ${index < 3 ? 'top-3' : ''}">
+                    <div class="row-left"><span class="rank">${index + 1}</span><img src="${item[1].thumb || 'https://placehold.co/45x45/1e293b/ffffff?text=?'}" class="thumb t-round" loading="lazy">
+                    <div class="row-text"><span class="name" title="${escapeQuotes(item[0])}">${truncateStr(item[0], 25)}</span></div></div>
+                    <span class="count-badge">${item[1].count}</span>
+                </div>`).join('');
+
+            document.getElementById('tracks-list').innerHTML = data.topTracks.map((item, index) => `
+                <div class="list-row ${index < 3 ? 'top-3' : ''}">
+                    <div class="row-left"><span class="rank">${index + 1}</span><img src="${item[1].thumb || 'https://placehold.co/45x45/1e293b/ffffff?text=?'}" class="thumb t-square" loading="lazy">
+                    <div class="row-text"><span class="name" title="${escapeQuotes(item[1].name)}">${truncateStr(item[1].name, 25)}</span><span class="sub" title="${escapeQuotes(item[1].artist)}">${truncateStr(item[1].artist, 25)}</span></div></div>
+                    <span class="count-badge">${item[1].count}</span>
+                </div>`).join('');
+
+            document.getElementById('onehit-list').innerHTML = data.oneHitWonders.map((artist, index) => `
+                <div class="list-row ${index < 3 ? 'top-3' : ''}">
+                    <div class="row-left"><span class="rank">${index + 1}</span><img src="${artist.thumb || 'https://placehold.co/45x45/1e293b/ffffff?text=?'}" class="thumb t-round" loading="lazy">
+                    <div class="row-text"><span class="name" title="${escapeQuotes(artist.name)}">${truncateStr(artist.name, 25)}</span>
+                    <span class="sub" title="${Math.round(artist.ratio * 100)}% ${t('onWord')} &quot;${escapeQuotes(artist.topTrackName)}&quot;">${Math.round(artist.ratio * 100)}% ${t('onWord')} "${truncateStr(artist.topTrackName, 25)}"</span></div></div>
+                    <span class="count-badge">${artist.totalListens}</span>
+                </div>`).join('');
+
+            document.getElementById('artist-tree').innerHTML = data.tieredArtistsTree.map((artistTier, index) => `
+                <details class="tier-node" ${index === 0 ? 'open' : ''}>
+                    <summary><span>${t(artistTier.label)}</span> <div style="display:flex; gap:10px; align-items:center;"><span style="font-size:0.85rem; color:var(--text-muted); font-weight:400;">${artistTier.data.length} ${t('artists')}</span><span class="chevron">▾</span></div></summary>
+                    <div class="tier-content">
+                        ${artistTier.data.map(artist => `
+                            <details class="artist-node" data-name="${escapeQuotes(artist.name.toLowerCase())}">
+                                <summary>
+                                    <div class="artist-left" style="display:flex; align-items:center; gap:10px;"><img src="${artist.thumb || 'https://placehold.co/45x45/1e293b/ffffff?text=?'}" class="thumb t-round" style="width:28px;height:28px;" loading="lazy"><span class="name" style="font-size:0.9rem;">${artist.name}</span></div>
+                                    <div class="summary-right" style="display:flex; align-items:center; gap:10px;"><span class="artist-badge">${artist.count}</span><span class="chevron">▾</span></div>
+                                </summary>
+                                <div class="artist-tracks">
+                                    ${artist.trackTiers.map((trackTier) => `
+                                        <div class="track-tier-label" style="margin-bottom:5px; margin-top:5px; font-size:0.8rem; font-weight:bold; color:var(--text-muted);">${t(trackTier.label)}</div>
+                                        ${trackTier.data.map(track => `
+                                            <div class="track-item" data-track="${escapeQuotes(track[1].name.toLowerCase())}">
+                                                <div class="track-item-left" style="display:flex; align-items:center; gap:8px;"><img src="${track[1].thumb || 'https://placehold.co/45x45/1e293b/ffffff?text=?'}" style="width:24px; height:24px; border-radius:4px; object-fit:cover;"><span class="name" style="font-size: 0.85rem;" title="${escapeQuotes(track[1].name)}">${truncateStr(track[1].name, 35)}</span></div>
+                                                <span style="color:var(--text-muted); font-size:0.8rem;">${track[1].count}</span>
+                                            </div>
+                                        `).join('')}
+                                    `).join('')}
+                                </div>
+                            </details>
+                        `).join('')}
+                    </div>
+                </details>
+            `).join('');
+
+            let bestDiscovery = data.discoveryRate.filter(d => d.totalListens >= 50).sort((a, b) => b.ratio - a.ratio)[0];
+            if (!bestDiscovery && data.discoveryRate.length > 0) bestDiscovery = data.discoveryRate[data.discoveryRate.length - 1];
+            document.getElementById('desc-discovery').innerText = bestDiscovery ? t('discoveryRateDesc', formatMonth(bestDiscovery.month), (bestDiscovery.ratio * 100).toFixed(1)) : '';
+        }
+
+        function renderCharts(data) {
+            if (charts.evo) charts.evo.destroy();
+            if (charts.habits) charts.habits.destroy();
+            if (charts.weekly) charts.weekly.destroy();
+            if (charts.discovery) charts.discovery.destroy();
+            if (charts.h2h) charts.h2h.destroy();
+
+            const ctxEvo = document.getElementById('evolutionChart').getContext('2d');
+            charts.evo = new Chart(ctxEvo, {
+                type: 'line',
+                data: {
+                    labels: data.evolution.map(d => formatMonth(d.date)),
+                    datasets: [{ label: t('listens'), data: data.evolution.map(d => d.count), borderColor: '#39C5BB', backgroundColor: (context) => { const ctx = context.chart.ctx; const g = ctx.createLinearGradient(0, 0, 0, 300); g.addColorStop(0, 'rgba(57, 197, 187, 0.2)'); g.addColorStop(1, 'rgba(57, 197, 187, 0)'); return g; }, borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 6 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } }, interaction: { mode: 'nearest', axis: 'x', intersect: false }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.04)' }, border: { display: false } }, x: { grid: { display: false }, border: { display: false } } } }
+            });
+
+            // CHART HEAD TO HEAD (MODIFIÉ)
+            const ctxH2h = document.getElementById('headToHeadChart').getContext('2d');
+            const h2hColors = ['#39C5BB', '#ff2a9d', '#facc15', '#c084fc', '#fb923c', '#4ade80', '#60a5fa', '#f87171', '#a78bfa', '#34d399', '#f472b6', '#fbbf24'];
+            charts.h2h = new Chart(ctxH2h, {
+                type: 'line',
+                data: {
+                    labels: data.last12Months.map(m => formatMonth(m)),
+                    datasets: data.headToHeadData.map((artist, i) => ({
+                        label: artist.name,
+                        data: artist.data,
+                        borderColor: h2hColors[i % h2hColors.length],
+                        backgroundColor: h2hColors[i % h2hColors.length] + '20',
+                        borderWidth: i < 5 ? 3 : 2,      // Plus épais pour le top 5
+                        tension: 0.4,
+                        pointRadius: i < 5 ? 4 : 2,
+                        pointHoverRadius: 6,
+                        fill: false,
+                        hidden: i >= 5 // SEULS LES 5 PLUS GROS SONT AFFICHÉS PAR DÉFAUT
+                    }))
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', font: { family: "'Inter', sans-serif", size: 11 }, boxWidth: 12, usePointStyle: true }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            itemSort: (a, b) => b.raw - a.raw, // Tri l'infobulle (plus grande valeur en haut)
+                            filter: (item) => item.raw > 0     // Cache les lignes inactives du mois
+                        }
+                    },
+                    interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                    scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.04)' }, border: { display: false } }, x: { grid: { display: false }, border: { display: false } } }
+                }
+            });
+
+            const ctxHabits = document.getElementById('habitsChart').getContext('2d');
+            charts.habits = new Chart(ctxHabits, {
+                type: 'bar',
+                data: { labels: Array.from({ length: 24 }, (_, i) => `${i}h`), datasets: [{ label: t('listens'), data: data.habitsByHour, backgroundColor: '#ff2a9d', borderRadius: 4, hoverBackgroundColor: '#ff5cb3' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, display: false }, x: { grid: { display: false }, border: { display: false } } } }
+            });
+
+            const weeklyData = [data.habitsByWeekDay[1], data.habitsByWeekDay[2], data.habitsByWeekDay[3], data.habitsByWeekDay[4], data.habitsByWeekDay[5], data.habitsByWeekDay[6], data.habitsByWeekDay[0]];
+            const ctxWeekly = document.getElementById('weeklyChart').getContext('2d');
+            charts.weekly = new Chart(ctxWeekly, {
+                type: 'radar',
+                data: { labels: i18n[currentLang].days.slice(1).concat([i18n[currentLang].days[0]]), datasets: [{ label: t('listens'), data: weeklyData, backgroundColor: 'rgba(57, 197, 187, 0.2)', borderColor: '#39C5BB', pointBackgroundColor: '#39C5BB', pointBorderColor: '#fff', pointHoverBackgroundColor: '#fff', pointHoverBorderColor: '#39C5BB' }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { r: { angleLines: { color: 'rgba(255, 255, 255, 0.1)' }, grid: { color: 'rgba(255, 255, 255, 0.1)' }, pointLabels: { color: '#94a3b8', font: { size: 12 } }, ticks: { display: false, backdropColor: 'transparent' } } }, plugins: { legend: { display: false } } }
+            });
+
+            const ctxDiscovery = document.getElementById('discoveryChart').getContext('2d');
+            charts.discovery = new Chart(ctxDiscovery, {
+                type: 'line',
+                data: { labels: data.discoveryRate.map(d => formatMonth(d.month)), datasets: [{ label: '% Nouveaux', data: data.discoveryRate.map(d => (d.ratio * 100).toFixed(1)), borderColor: '#facc15', backgroundColor: 'rgba(250, 204, 21, 0.2)', borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (context) { return context.raw + '%'; } } } }, scales: { y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255, 255, 255, 0.04)' }, border: { display: false } }, x: { grid: { display: false }, border: { display: false } } } }
+            });
+        }
+
+        function renderHeatmap(data) {
+            const container = document.getElementById('heatmap-grid');
+            const labelsContainer = document.querySelector('.heatmap-labels');
+            labelsContainer.innerHTML = `<span>${i18n[currentLang].days[0]}</span><span>${i18n[currentLang].days[2]}</span><span>${i18n[currentLang].days[4]}</span><span>${i18n[currentLang].days[6]}</span>`;
+
+            const today = new Date(); let dateIter = new Date(today); dateIter.setDate(today.getDate() - 364);
+            const maxActivity = Math.max(1, ...Object.values(data.activityByDay));
+            let html = '';
+
+            for (let i = 0; i < dateIter.getDay(); i++) html += `<div class="heatmap-cell empty" style="background:transparent; border:none; pointer-events:none;"></div>`;
+
+            for (let i = 0; i <= 364; i++) {
+                const dStr = `${dateIter.getFullYear()}-${String(dateIter.getMonth() + 1).padStart(2, '0')}-${String(dateIter.getDate()).padStart(2, '0')}`;
+                const count = data.activityByDay[dStr] || 0; let level = 0;
+                if (count > 0) level = 1; if (count > maxActivity * 0.25) level = 2; if (count > maxActivity * 0.50) level = 3; if (count > maxActivity * 0.75) level = 4;
+                html += `<div class="heatmap-cell lvl-${level}" title="${count > 0 ? t('listenLe', count, formatDate(dStr)) : t('noListenLe', formatDate(dStr))}"></div>`;
+                dateIter.setDate(dateIter.getDate() + 1);
+            }
+            container.innerHTML = html; container.parentElement.scrollLeft = container.scrollWidth;
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('search-input'); let preSearchState = null;
+            searchInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                if (term !== '' && preSearchState === null) { preSearchState = new Map(); document.querySelectorAll('.tier-node, .artist-node').forEach(node => preSearchState.set(node, node.hasAttribute('open'))); }
+                document.querySelectorAll('.artist-node').forEach(node => {
+                    const artistName = node.getAttribute('data-name'); let hasMatch = artistName.includes(term);
+                    node.querySelectorAll('.track-item').forEach(trackNode => {
+                        const trackName = trackNode.getAttribute('data-track');
+                        if (trackName.includes(term)) { hasMatch = true; trackNode.style.display = 'flex'; }
+                        else trackNode.style.display = term === '' ? 'flex' : (artistName.includes(term) ? 'flex' : 'none');
+                    });
+                    node.style.display = hasMatch ? 'block' : 'none';
+                    if (term !== '' && hasMatch) node.setAttribute('open', 'true');
+                });
+                document.querySelectorAll('.tier-node').forEach(tier => {
+                    if (term !== '') {
+                        const vis = Array.from(tier.querySelectorAll('.artist-node')).filter(n => n.style.display !== 'none');
+                        tier.style.display = vis.length > 0 ? 'block' : 'none'; if (vis.length > 0) tier.setAttribute('open', 'true');
+                    } else tier.style.display = 'block';
+                });
+                if (term === '' && preSearchState !== null) { document.querySelectorAll('.tier-node, .artist-node').forEach(node => preSearchState.get(node) ? node.setAttribute('open', 'true') : node.removeAttribute('open')); preSearchState = null; }
+            });
+        }
+        loadStats();
+    </script>
+</body>
+
+</html>
