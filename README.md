@@ -33,10 +33,14 @@ Pour que ce Dashboard fonctionne, vous devez lui fournir l'historique de YouTube
 ## Compilation
 
 ### Prérequis
-- `Node.js`.
+- `Node.js`
+- `Git`.
 
-### Étapes
+### Étapes de compilation manuelle
 1. Cloner ce répertoire : `git clone https://github.com/SamL-GIT/yt-music-stats-app.git`.
 2. Installer les dépendances : `npm install`.
-3. Lancer en local : `npm start`.
-4. Pour compiler (Portable & Installeur) : `npm run dist`. (Ils se trouveront dans le dossier `dist/`).
+3. Lancer en local le mode développement : `npm start`.
+4. Pour compiler l'application :
+   - **Windows** (génère `.exe` portable et installeur) : `npm run dist:win`
+   - **Linux** (génère `.AppImage`, *doit être exécuté depuis un environnement Linux/WSL*) : `npm run dist:linux`
+5. Les fichiers compilés se trouveront dans le dossier `dist/`.
