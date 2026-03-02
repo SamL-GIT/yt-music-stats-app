@@ -22,7 +22,7 @@ Pour que ce Dashboard fonctionne, vous devez lui fournir l'historique de YouTube
 4. Cliquez sur le bouton "formats multiples" et vérifiez que l'historique est configuré au format `HTML` ou `JSON`
 
 > ⚠️ **Avertissement sur le format HTML :**
-> L'export des données Google Takeout vous propose de télécharger l'historique sous format `.html` et `JSON`, L'historique du format `.html` remonte plus loin que le format `JSON` et est donc préférable , mais le parsing du format `.html` est plus long et l'application supporte uniquement les export pour les comtpes dont la langue est configurée sur `Français`
+> L'export des données Google Takeout vous propose de télécharger l'historique sous format `.html` et `JSON`, L'historique du format `.html` remonte plus loin que le format `JSON` et est donc préférable , mais le parsing du format `.html` est plus long et l'application supporte uniquement les export pour les comptes dont la langue est configurée sur `Français`
 
 5. Cliquez sur "toute les Youtube sont  Incluses" et décochez tout, **SAUF** "historique".
 6. Cliquez sur "Étape suivante", choisissez "Exporter en une seule fois", créez l'export, et patientez pendant la génération. 
