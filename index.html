@@ -875,15 +875,114 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .takeout-guide {
+            margin-top: 40px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 25px;
+            text-align: left;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .takeout-guide h3 {
+            color: var(--primary);
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .takeout-guide ol {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .takeout-guide li {
+            line-height: 1.5;
+        }
+
+        .takeout-guide strong {
+            color: var(--text-main);
+        }
+
+        .takeout-guide code {
+            background: rgba(57, 197, 187, 0.15);
+            color: var(--primary);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        .takeout-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--primary);
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: 0.2s;
+            margin-left: 5px;
+            margin-right: 5px;
+        }
+
+        .takeout-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(57, 197, 187, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .takeout-guide {
+                padding: 15px;
+            }
+
+            .takeout-guide h3 {
+                font-size: 1.1rem;
+            }
+        }
     </style>
 </head>
 
 <body>
 
     <div id="drop-zone" class="drop-zone hidden">
+        <div class="lang-switch" onclick="toggleLang()"
+            style="position: absolute; top: 20px; right: 20px; z-index: 10001; margin: 0;">
+            <span id="lang-fr-dz" class="active">FR</span>
+            <span id="lang-en-dz">EN</span>
+        </div>
         <div class="drop-content">
             <h2 id="dz-title">📥 Glissez-déposez votre historique ici</h2>
             <p id="dz-subtitle">Formats supportés : .json ou .html</p>
+
+            <div class="takeout-guide">
+                <h3 id="dz-guide-title">ℹ️ Comment récupérer vos données ?</h3>
+                <ol>
+                    <li id="dz-guide-step1">Allez sur <a href="https://takeout.google.com/" target="_blank"
+                            class="takeout-link">Google Takeout</a> et désélectionnez tout.</li>
+                    <li id="dz-guide-step2">Descendez et cochez uniquement <strong>YouTube et YouTube Music</strong>.
+                    </li>
+                    <li id="dz-guide-step3">Cliquez sur « Étapes suivantes » puis sur « Créer une exportation ».</li>
+                    <li id="dz-guide-step4">Téléchargez l'archive, extrayez-la, et glissez le fichier
+                        <code>historique de lecture</code> (.json ou .html) ici.
+                    </li>
+                </ol>
+            </div>
+
             <div id="upload-loader" style="display: none; margin-top: 30px;">
                 <div class="spinner"></div>
                 <p id="dz-loading-text" style="color: var(--primary); margin-top: 15px; font-weight: 600;">Analyse en
@@ -1148,7 +1247,12 @@
                 onWord: "sur",
                 dropTitle: "📥 Glissez-déposez votre historique ici",
                 dropSubtitle: "Formats supportés : .json (rapide) ou .html (parsing automatique plus long)",
-                dropLoading: "Analyse en cours... (cela peut prendre quelques secondes pour un fichier HTML)"
+                dropLoading: "Analyse en cours... (cela peut prendre quelques secondes)",
+                guideTitle: "ℹ️ Comment récupérer vos données ?",
+                guideStep1: "Allez sur <a href='https://takeout.google.com/' target='_blank' class='takeout-link'>Google Takeout</a> et désélectionnez tout.",
+                guideStep2: "Descendez et cochez uniquement <strong>YouTube et YouTube Music</strong>.",
+                guideStep3: "Cliquez sur « Étapes suivantes » puis sur « Créer une exportation ».",
+                guideStep4: "Téléchargez l'archive, extrayez-la, et glissez le fichier <code>historique de lecture</code> (.json ou .html) ici."
             },
             en: {
                 title: "My YouTube Music Stats - Dashboard",
@@ -1197,11 +1301,17 @@
                 onWord: "on",
                 dropTitle: "📥 Drag & drop your history file here",
                 dropSubtitle: "Supported formats: .json (fast) or .html (slower, automatic parsing)",
-                dropLoading: "Parsing in progress... (this may take a few seconds for an HTML file)"
+                dropLoading: "Parsing in progress... (this may take a few seconds)",
+                guideTitle: "ℹ️ How to get your data?",
+                guideStep1: "Go to <a href='https://takeout.google.com/' target='_blank' class='takeout-link'>Google Takeout</a> and deselect all.",
+                guideStep2: "Scroll down and check only <strong>YouTube and YouTube Music</strong>.",
+                guideStep3: "Click on 'Next step' then 'Create export'.",
+                guideStep4: "Download the archive, extract it, and drag the <code>watch history</code> file (.json or .html) here."
             }
         };
 
-        let currentLang = 'fr'; let statsData = null; let charts = {};
+        let currentLang = (navigator.language || navigator.userLanguage || 'fr').startsWith('fr') ? 'fr' : 'en';
+        let statsData = null; let charts = {};
 
         Chart.defaults.color = '#94a3b8'; Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
 
@@ -1224,10 +1334,25 @@
 
         function toggleLang() {
             currentLang = currentLang === 'fr' ? 'en' : 'fr';
-            document.getElementById('lang-fr').classList.toggle('active', currentLang === 'fr');
-            document.getElementById('lang-en').classList.toggle('active', currentLang === 'en');
-            document.documentElement.lang = currentLang;
+            updateLangUI();
             updateStaticTexts(); if (statsData) renderAll();
+        }
+
+        function updateLangUI() {
+            const frActive = currentLang === 'fr';
+            const enActive = currentLang === 'en';
+
+            const frEl = document.getElementById('lang-fr');
+            const enEl = document.getElementById('lang-en');
+            if (frEl) frEl.classList.toggle('active', frActive);
+            if (enEl) enEl.classList.toggle('active', enActive);
+
+            const frDzEl = document.getElementById('lang-fr-dz');
+            const enDzEl = document.getElementById('lang-en-dz');
+            if (frDzEl) frDzEl.classList.toggle('active', frActive);
+            if (enDzEl) enDzEl.classList.toggle('active', enActive);
+
+            document.documentElement.lang = currentLang;
         }
 
         function updateStaticTexts() {
@@ -1261,6 +1386,11 @@
             document.getElementById('dz-title').innerText = t('dropTitle');
             document.getElementById('dz-subtitle').innerText = t('dropSubtitle');
             document.getElementById('dz-loading-text').innerText = t('dropLoading');
+            document.getElementById('dz-guide-title').innerText = t('guideTitle');
+            document.getElementById('dz-guide-step1').innerHTML = t('guideStep1');
+            document.getElementById('dz-guide-step2').innerHTML = t('guideStep2');
+            document.getElementById('dz-guide-step3').innerHTML = t('guideStep3');
+            document.getElementById('dz-guide-step4').innerHTML = t('guideStep4');
         }
 
         async function loadStats() {
@@ -1574,6 +1704,7 @@
                 if (term === '' && preSearchState !== null) { document.querySelectorAll('.tier-node, .artist-node').forEach(node => preSearchState.get(node) ? node.setAttribute('open', 'true') : node.removeAttribute('open')); preSearchState = null; }
             });
         }
+        updateLangUI();
         loadStats();
     </script>
 </body>

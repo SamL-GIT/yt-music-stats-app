@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 const Fastify = require('fastify');
 const fs = require('fs');
@@ -453,6 +453,13 @@ function createWindow(port) {
         event.preventDefault();
       }
     }
+  });
+
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http:') || url.startsWith('https:')) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
   });
 
   win.loadURL(`http://localhost:${port}/`);
